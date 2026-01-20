@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    {% if city %}Редактирование города: {{ city.name }}{% else %}Добавление нового города{% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Название города *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ city.name if city else request.form.get('name', '') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">
+                            {{- city.description if city else request.form.get('description', '') -}}
+                        </textarea>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="latitude" class="form-label">Широта *</label>
+                            <input type="number" step="any" class="form-control" id="latitude" name="latitude" 
+                                   value="{{ city.latitude if city else request.form.get('latitude', '') }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="longitude" class="form-label">Долгота *</label>
+                            <input type="number" step="any" class="form-control" id="longitude" name="longitude" 
+                                   value="{{ city.longitude if city else request.form.get('longitude', '') }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="zoom" class="form-label">Масштаб карты</label>
+                            <input type="number" class="form-control" id="zoom" name="zoom" 
+                                   value="{{ city.zoom if city else request.form.get('zoom', 12) }}" min="1" max="18">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                   {% if city and city.is_active or request.form.get('is_active') %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                Город активен
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_cities') }}" class="btn btn-secondary me-md-2">Отмена</a>
+                        <button type="submit" class="btn btn-success">
+                            {% if city %}Сохранить{% else %}Добавить город{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

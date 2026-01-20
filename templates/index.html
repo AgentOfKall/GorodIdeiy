@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Город Идей - Интерактивная карта предложений</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-city me-2"></i>Город Идей
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('index') }}">Главная</a>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('map_page') }}">Карта</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('ideas_list') }}">Все идеи</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('implemented_ideas') }}">Реализованные</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('add_idea') }}">Предложить идею</a>
+                    </li>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            Администрирование
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_panel') }}">Модерация идей</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_cities') }}">Управление городами</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('stats') }}">Статистика</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="navbar-text">Привет, {{ current_user.username }}!</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile') }}">Профиль</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">Выйти</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Войти</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Регистрация</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="display-4 mb-4">Город Идей</h1>
+                <p class="lead">Платформа для участия жителей в развитии городской среды</p>
+                
+                {% if current_user.is_authenticated %}
+                <div class="row mt-5">
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">🗺️ Интерактивная карта</h5>
+                                <p class="card-text">Смотрите предложения других жителей на карте города</p>
+                                <a href="{{ url_for('map_page') }}" class="btn btn-primary">Открыть карту</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">💡 Предложить идею</h5>
+                                <p class="card-text">Поделитесь своей идеей по улучшению города</p>
+                                <a href="{{ url_for('add_idea') }}" class="btn btn-success">Добавить идею</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">✅ Реализованные идеи</h5>
+                                <p class="card-text">Посмотрите идеи, которые уже воплотили в жизнь</p>
+                                <a href="{{ url_for('implemented_ideas') }}" class="btn btn-info">Смотреть</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Последние реализованные идеи -->
+                {% if implemented_ideas %}
+                <div class="mt-5">
+                    <h3>Недавно реализованные идеи</h3>
+                    <div class="row mt-4">
+                        {% for idea in implemented_ideas %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">{{ idea.title|truncate(30) }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">{{ idea.description|truncate(100) }}</p>
+                                    <span class="badge bg-secondary">{{ idea.category }}</span>
+                                    {% if idea.city_name %}
+                                    <span class="badge bg-info ms-1">{{ idea.city_name }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="card-footer">
+                                    <a href="{{ url_for('idea_detail', idea_id=idea.id) }}" class="btn btn-success btn-sm">Подробнее</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ url_for('implemented_ideas') }}" class="btn btn-outline-success">Все реализованные идеи →</a>
+                </div>
+                {% endif %}
+
+                <div class="mt-5">
+                    <h3>Как это работает?</h3>
+                    <div class="row text-start mt-4">
+                        <div class="col-md-3">
+                            <h5>1. Регистрация</h5>
+                            <p>Создайте аккаунт на платформе</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h5>2. Предложение</h5>
+                            <p>Добавьте свою идею с описанием и локацией</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h5>3. Обсуждение</h5>
+                            <p>Комментируйте и голосуйте за идеи других</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h5>4. Реализация</h5>
+                            <p>Лучшие идеи передаются администрации и реализуются</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Для неавторизованных пользователей -->
+                <div class="row mt-5">
+                    <div class="col-md-6 mx-auto">
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <h3 class="mb-4">Добро пожаловать в "Город Идей"!</h3>
+                                <p class="mb-4">Платформа для совместного улучшения городской среды.</p>
+                                <p class="text-muted mb-4">Для доступа ко всем функциям необходимо войти в систему</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Войти</a>
+                                    <a href="{{ url_for('register') }}" class="btn btn-success btn-lg">Зарегистрироваться</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-light mt-5 py-4">
+        <div class="container text-center">
+            <p>&copy; 2024 Город Идей. Интерактивная карта предложений жителей.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

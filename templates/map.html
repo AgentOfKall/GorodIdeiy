@@ -1,0 +1,920 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Интерактивная карта предложений</h2>
+            <div id="mapControls">
+                <button class="btn btn-outline-secondary" onclick="zoomIn()" title="Приблизить">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="btn btn-outline-secondary" onclick="zoomOut()" title="Отдалить">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="btn btn-outline-secondary" onclick="locateMe()" title="Мое местоположение">
+                    <i class="fas fa-location-arrow"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Выбор города -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>Выберите город:</h5>
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('map_page') }}" 
+                       class="btn btn-outline-primary {% if not city %}active{% endif %}">
+                        Все города
+                    </a>
+                    {% for c in cities %}
+                    <a href="{{ url_for('map_page', city_id=c.id) }}" 
+                       class="btn btn-outline-primary {% if city and city.id == c.id %}active{% endif %}">
+                        {{ c.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% if city %}
+                <div class="mt-2">
+                    <small class="text-muted">Текущий город: <strong>{{ city.name }}</strong></small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Инструкция -->
+        <div class="alert alert-info mb-4">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-info-circle fa-2x"></i>
+                </div>
+                <div>
+                    <h5 class="alert-heading mb-1">Как добавить идею?</h5>
+                    <p class="mb-0">Просто кликните в любое место на карте! Вы можете перемещать карту, увеличивать и уменьшать масштаб для точного выбора места.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="map" style="height: 600px; width: 100%; border-radius: 10px; border: 2px solid #dee2e6;"></div>
+        
+        <!-- Легенда -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Легенда карты</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Категории идей:</h6>
+                        <div class="row">
+                            {% for category, color in {
+                                'спорт': '#4CAF50',
+                                'культура': '#2196F3',
+                                'детский досуг': '#FF9800',
+                                'экология': '#009688',
+                                'транспорт': '#795548',
+                                'благоустройство': '#9C27B0',
+                                'образование': '#F44336',
+                                'здравоохранение': '#607D8B'
+                            }.items() %}
+                            <div class="col-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="legend-color" style="background-color: {{ color }}; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px;"></div>
+                                    <span>{{ category|title }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Символы:</h6>
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div style="width: 24px; height: 24px; background-color: #dc3545; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-right: 10px;"></div>
+                                <span>Новая идея (кликните на карте)</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div style="width: 24px; height: 24px; background-color: #28a745; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-right: 10px;"></div>
+                                <span>Существующая идея (кликните для просмотра)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для добавления идеи -->
+<div class="modal fade" id="addIdeaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Добавить новую идею</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if current_user.is_authenticated %}
+                <form id="addIdeaForm">
+                    <div class="mb-3">
+                        <label for="ideaTitle" class="form-label">Название идеи *</label>
+                        <input type="text" class="form-control" id="ideaTitle" name="title" required
+                               placeholder="Например: Скамейка в парке, Детская площадка и т.д.">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ideaDescription" class="form-label">Подробное описание *</label>
+                        <textarea class="form-control" id="ideaDescription" name="description" rows="4" required
+                                  placeholder="Опишите вашу идею максимально подробно. Чем лучше описана идея, тем больше шансов на её реализацию."></textarea>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="ideaCategory" class="form-label">Категория *</label>
+                            <select class="form-select" id="ideaCategory" name="category" required>
+                                <option value="">Выберите категорию</option>
+                                <option value="спорт">Спорт</option>
+                                <option value="культура">Культура</option>
+                                <option value="детский досуг">Детский досуг</option>
+                                <option value="экология">Экология</option>
+                                <option value="транспорт">Транспорт</option>
+                                <option value="благоустройство">Благоустройство</option>
+                                <option value="образование">Образование</option>
+                                <option value="здравоохранение">Здравоохранение</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="ideaCity" class="form-label">Город</label>
+                            <select class="form-select" id="ideaCity" name="city_id">
+                                <option value="">Не указан</option>
+                                {% for city in cities %}
+                                <option value="{{ city.id }}" {% if city and city.id == city.id %}selected{% endif %}>
+                                    {{ city.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Местоположение:</label>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">Широта</span>
+                                    <input type="text" class="form-control" id="ideaLatitude" name="latitude" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">Долгота</span>
+                                    <input type="text" class="form-control" id="ideaLongitude" name="longitude" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text">Координаты автоматически определяются при клике на карте</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="alert alert-warning">
+                            <small>
+                                <strong>Внимание:</strong> После добавления идея отправится на модерацию администратору.
+                                После одобрения она появится на карте для всех пользователей.
+                            </small>
+                        </div>
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-user-lock fa-4x text-muted"></i>
+                    </div>
+                    <h4>Требуется авторизация</h4>
+                    <p>Чтобы предложить идею, необходимо войти в систему или зарегистрироваться.</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-primary" onclick="showLoginModal()">
+                            <i class="fas fa-sign-in-alt me-1"></i>Войти
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="showRegisterModal()">
+                            <i class="fas fa-user-plus me-1"></i>Зарегистрироваться
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                {% if current_user.is_authenticated %}
+                <button type="button" class="btn btn-success" onclick="saveIdeaFromMap()">
+                    <span id="saveBtnText">Сохранить идею</span>
+                    <span id="saveBtnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Информационное окно для существующих идей -->
+<div class="modal fade" id="ideaInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="ideaInfoTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="ideaInfoBody"></div>
+            <div class="modal-footer">
+                <a href="#" class="btn btn-primary" id="ideaDetailLink">
+                    <i class="fas fa-external-link-alt me-1"></i>Подробнее
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для логина -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Вход в систему</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="modalUsername" class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control" id="modalUsername" name="username" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modalPassword" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="modalPassword" name="password" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" onclick="submitLogin()">Войти</button>
+                    </div>
+                </form>
+                
+                <div class="mt-3 text-center">
+                    <p>Нет аккаунта? <a href="#" onclick="showRegisterModal()">Зарегистрируйтесь</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для регистрации -->
+<div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Регистрация</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label for="regUsername" class="form-label">Имя пользователя *</label>
+                        <input type="text" class="form-control" id="regUsername" name="username" required>
+                        <div class="form-text">От 3 до 80 символов</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="regEmail" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="regEmail" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="regPassword" class="form-label">Пароль *</label>
+                        <input type="password" class="form-control" id="regPassword" name="password" required>
+                        <div class="form-text">Не менее 6 символов</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="regConfirmPassword" class="form-label">Подтверждение пароля *</label>
+                        <input type="password" class="form-control" id="regConfirmPassword" name="confirm_password" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-success" onclick="submitRegister()">Зарегистрироваться</button>
+                    </div>
+                </form>
+                
+                <div class="mt-3 text-center">
+                    <p>Уже есть аккаунт? <a href="#" onclick="showLoginModal()">Войдите</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.css" />
+
+<script>
+    let map;
+    let markers = [];
+    let temporaryMarker = null;
+    let selectedCoords = null;
+    let currentCityId = {{ city.id if city else 'null' }};
+    
+    const categoryColors = {
+        'спорт': '#4CAF50',
+        'культура': '#2196F3',
+        'детский досуг': '#FF9800',
+        'экология': '#009688',
+        'транспорт': '#795548',
+        'благоустройство': '#9C27B0',
+        'образование': '#F44336',
+        'здравоохранение': '#607D8B'
+    };
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        let centerLat = 55.7558;
+        let centerLng = 37.6173;
+        let zoomLevel = 5;
+        
+        {% if city %}
+            centerLat = {{ city.latitude }};
+            centerLng = {{ city.longitude }};
+            zoomLevel = {{ city.zoom }};
+        {% endif %}
+        
+        map = L.map('map').setView([centerLat, centerLng], zoomLevel);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        const geocoder = L.Control.geocoder({
+            defaultMarkGeocode: false,
+            placeholder: 'Поиск адреса...',
+            errorMessage: 'Адрес не найден',
+            showResultIcons: true,
+            collapsed: false
+        }).on('markgeocode', function(e) {
+            const center = e.geocode.center;
+            map.setView(center, 16);
+            
+            L.popup()
+                .setLatLng(center)
+                .setContent('<div class="text-center"><p><strong>Найдено:</strong> ' + e.geocode.name + '</p><p>Кликните на карте, чтобы добавить идею здесь</p></div>')
+                .openOn(map);
+        }).addTo(map);
+        
+        loadIdeas();
+        
+        map.on('click', function(e) {
+            handleMapClick(e.latlng);
+        });
+        
+        map.on('dblclick', function(e) {
+            map.setView(e.latlng, map.getZoom() + 1);
+        });
+        
+        if (!localStorage.getItem('mapInstructionShown')) {
+            setTimeout(() => {
+                L.popup()
+                    .setLatLng(map.getCenter())
+                    .setContent('<div class="text-center"><h6>Добро пожаловать!</h6><p>Кликните в любое место на карте, чтобы добавить новую идею</p></div>')
+                    .openOn(map);
+                localStorage.setItem('mapInstructionShown', 'true');
+            }, 1000);
+        }
+    });
+    
+    function handleMapClick(latlng) {
+        if (!current_user_authenticated) {
+            showLoginModal();
+            return;
+        }
+        
+        if (temporaryMarker) {
+            map.removeLayer(temporaryMarker);
+        }
+        
+        temporaryMarker = L.marker(latlng, {
+            icon: L.divIcon({
+                className: 'temporary-marker',
+                html: `
+                    <div style="
+                        background-color: #dc3545;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                        animation: pulse 1.5s infinite;
+                        cursor: pointer;
+                    ">
+                        <i class="fas fa-plus" style="color: white; font-size: 12px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></i>
+                    </div>
+                `,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            })
+        }).addTo(map);
+        
+        L.popup()
+            .setLatLng(latlng)
+            .setContent('<div class="text-center"><p><strong>Вы выбрали место!</strong></p><p>Заполните форму для добавления идеи</p></div>')
+            .openOn(map);
+        
+        showAddIdeaModal(latlng.lat, latlng.lng);
+    }
+    
+    function loadIdeas() {
+        let url = '/api/ideas';
+        if (currentCityId) {
+            url += '?city_id=' + currentCityId;
+        }
+        
+        fetch(url)
+            .then(response => {
+                if (response.status === 401) {
+                    // Пользователь не авторизован
+                    showLoginInfoOnMap();
+                    return [];
+                }
+                return response.json();
+            })
+            .then(ideas => {
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+                
+                ideas.forEach(idea => {
+                    let iconColor = categoryColors[idea.category] || '#666666';
+                    
+                    let normalIcon = L.divIcon({
+                        className: 'idea-marker',
+                        html: `
+                            <div style="
+                                background-color: ${iconColor};
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 50%;
+                                border: 3px solid white;
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                cursor: pointer;
+                            ">
+                                <i class="fas fa-lightbulb" style="color: white; font-size: 14px;"></i>
+                            </div>
+                        `,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    });
+                    
+                    let hoverIcon = L.divIcon({
+                        className: 'idea-marker-hover',
+                        html: `
+                            <div style="
+                                background-color: ${iconColor};
+                                width: 32px;
+                                height: 32px;
+                                border-radius: 50%;
+                                border: 3px solid yellow;
+                                box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                cursor: pointer;
+                            ">
+                                <i class="fas fa-lightbulb" style="color: white; font-size: 16px;"></i>
+                            </div>
+                        `,
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18]
+                    });
+                    
+                    let marker = L.marker([idea.lat, idea.lng], {icon: normalIcon})
+                        .addTo(map)
+                        .on('click', function() {
+                            if (!current_user_authenticated) {
+                                showLoginModal();
+                            } else {
+                                showIdeaInfo(idea);
+                            }
+                        })
+                        .on('mouseover', function() {
+                            this.setIcon(hoverIcon);
+                        })
+                        .on('mouseout', function() {
+                            this.setIcon(normalIcon);
+                        });
+                    
+                    markers.push(marker);
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки идей:', error);
+                showLoginInfoOnMap();
+            });
+    }
+    
+    function showLoginInfoOnMap() {
+        L.popup()
+            .setLatLng(map.getCenter())
+            .setContent(`
+                <div class="text-center">
+                    <h6>Требуется авторизация</h6>
+                    <p>Для просмотра идей на карте необходимо войти в систему</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-sm btn-primary" onclick="showLoginModal()">Войти</button>
+                        <button class="btn btn-sm btn-success" onclick="showRegisterModal()">Регистрация</button>
+                    </div>
+                </div>
+            `)
+            .openOn(map);
+    }
+    
+    function showAddIdeaModal(lat, lng) {
+        selectedCoords = { lat: lat, lng: lng };
+        
+        document.getElementById('ideaLatitude').value = lat.toFixed(6);
+        document.getElementById('ideaLongitude').value = lng.toFixed(6);
+        
+        if (currentCityId) {
+            document.getElementById('ideaCity').value = currentCityId;
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('addIdeaModal'));
+        modal.show();
+        
+        setTimeout(() => {
+            document.getElementById('ideaTitle').focus();
+        }, 500);
+    }
+    
+    function showIdeaInfo(idea) {
+        document.getElementById('ideaInfoTitle').textContent = idea.title;
+        
+        let infoHTML = `
+            <div class="mb-3">
+                <span class="badge" style="background-color: ${categoryColors[idea.category] || '#666'}">${idea.category}</span>
+            </div>
+            <p class="mb-3">${idea.description.substring(0, 200)}${idea.description.length > 200 ? '...' : ''}</p>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <small><strong>Автор:</strong><br>${idea.user}</small>
+                </div>
+                <div class="col-6">
+                    <small><strong>Дата:</strong><br>${idea.created_at}</small>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="badge bg-success">${idea.votes} 👍</span>
+                <small class="text-muted">Кликните "Подробнее" для полной информации</small>
+            </div>
+        `;
+        
+        document.getElementById('ideaInfoBody').innerHTML = infoHTML;
+        document.getElementById('ideaDetailLink').href = '/idea/' + idea.id;
+        
+        const modal = new bootstrap.Modal(document.getElementById('ideaInfoModal'));
+        modal.show();
+    }
+    
+    function saveIdeaFromMap() {
+        const title = document.getElementById('ideaTitle').value.trim();
+        const description = document.getElementById('ideaDescription').value.trim();
+        const category = document.getElementById('ideaCategory').value;
+        const cityId = document.getElementById('ideaCity').value;
+        
+        if (!title) {
+            alert('Пожалуйста, введите название идеи');
+            document.getElementById('ideaTitle').focus();
+            return;
+        }
+        
+        if (!description) {
+            alert('Пожалуйста, введите описание идеи');
+            document.getElementById('ideaDescription').focus();
+            return;
+        }
+        
+        if (!category) {
+            alert('Пожалуйста, выберите категорию');
+            document.getElementById('ideaCategory').focus();
+            return;
+        }
+        
+        const saveBtn = document.querySelector('#addIdeaModal .btn-success');
+        const saveBtnText = document.getElementById('saveBtnText');
+        const saveBtnSpinner = document.getElementById('saveBtnSpinner');
+        
+        saveBtn.disabled = true;
+        saveBtnText.textContent = 'Сохранение...';
+        saveBtnSpinner.classList.remove('d-none');
+        
+        fetch('/add_idea_ajax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                description: description,
+                category: category,
+                latitude: selectedCoords.lat,
+                longitude: selectedCoords.lng,
+                city_id: cityId || null
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addIdeaModal')).hide();
+                
+                if (temporaryMarker) {
+                    map.removeLayer(temporaryMarker);
+                    temporaryMarker = null;
+                }
+                
+                showNotification('Идея успешно добавлена! Она отправилась на модерацию.', 'success');
+                
+                setTimeout(() => {
+                    loadIdeas();
+                }, 1000);
+                
+                setTimeout(() => {
+                    if (data.idea_id) {
+                        window.location.href = '/idea/' + data.idea_id;
+                    }
+                }, 3000);
+                
+            } else {
+                alert('Ошибка: ' + data.message);
+                resetSaveButton();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при отправке идеи');
+            resetSaveButton();
+        });
+    }
+    
+    function resetSaveButton() {
+        const saveBtn = document.querySelector('#addIdeaModal .btn-success');
+        const saveBtnText = document.getElementById('saveBtnText');
+        const saveBtnSpinner = document.getElementById('saveBtnSpinner');
+        
+        saveBtn.disabled = false;
+        saveBtnText.textContent = 'Сохранить идею';
+        saveBtnSpinner.classList.add('d-none');
+    }
+    
+    function showNotification(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = `
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        alertDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2 fa-lg"></i>
+                <div>
+                    <strong>${type === 'success' ? 'Успешно!' : 'Информация'}</strong><br>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    
+    function zoomIn() {
+        map.zoomIn();
+    }
+    
+    function zoomOut() {
+        map.zoomOut();
+    }
+    
+    function locateMe() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 16);
+                    
+                    L.popup()
+                        .setLatLng([lat, lng])
+                        .setContent('<div class="text-center"><p><strong>Ваше местоположение</strong></p><p>Кликните на карте рядом, чтобы добавить идею</p></div>')
+                        .openOn(map);
+                },
+                function(error) {
+                    alert('Не удалось получить ваше местоположение: ' + error.message);
+                }
+            );
+        } else {
+            alert('Геолокация не поддерживается вашим браузером');
+        }
+    }
+    
+    // Функции для модальных окон логина/регистрации
+    function showLoginModal() {
+        const addIdeaModal = bootstrap.Modal.getInstance(document.getElementById('addIdeaModal'));
+        if (addIdeaModal) addIdeaModal.hide();
+        
+        const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+        modal.show();
+        
+        setTimeout(() => {
+            document.getElementById('modalUsername').focus();
+        }, 500);
+    }
+    
+    function showRegisterModal() {
+        const addIdeaModal = bootstrap.Modal.getInstance(document.getElementById('addIdeaModal'));
+        if (addIdeaModal) addIdeaModal.hide();
+        
+        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+        if (loginModal) loginModal.hide();
+        
+        const modal = new bootstrap.Modal(document.getElementById('registerModal'));
+        modal.show();
+        
+        setTimeout(() => {
+            document.getElementById('regUsername').focus();
+        }, 500);
+    }
+    
+    function submitLogin() {
+        const username = document.getElementById('modalUsername').value.trim();
+        const password = document.getElementById('modalPassword').value;
+        
+        if (!username || !password) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+        }
+        
+        fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.text();
+            }
+        })
+        .then(data => {
+            if (data) {
+                alert('Неверное имя пользователя или пароль');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при входе');
+        });
+    }
+    
+    function submitRegister() {
+        const username = document.getElementById('regUsername').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const confirmPassword = document.getElementById('regConfirmPassword').value;
+        
+        if (!username || !email || !password || !confirmPassword) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            alert('Пароли не совпадают');
+            return;
+        }
+        
+        if (password.length < 6) {
+            alert('Пароль должен содержать не менее 6 символов');
+            return;
+        }
+        
+        fetch('/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&confirm_password=${encodeURIComponent(confirmPassword)}`
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.text();
+            }
+        })
+        .then(data => {
+            if (data && data.includes('Ошибка')) {
+                alert('Ошибка при регистрации. Возможно, пользователь с таким именем уже существует.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при регистрации');
+        });
+    }
+    
+    // Глобальная переменная для проверки авторизации
+    const current_user_authenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+    
+    document.getElementById('addIdeaModal').addEventListener('hidden.bs.modal', function () {
+        if (document.getElementById('addIdeaForm')) {
+            document.getElementById('addIdeaForm').reset();
+        }
+        resetSaveButton();
+        
+        if (temporaryMarker) {
+            map.removeLayer(temporaryMarker);
+            temporaryMarker = null;
+        }
+    });
+</script>
+
+<style>
+    #map {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .temporary-marker {
+        background: none !important;
+        border: none !important;
+    }
+    
+    .idea-marker, .idea-marker-hover {
+        background: none !important;
+        border: none !important;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    .leaflet-popup-content {
+        max-height: 300px;
+        overflow-y: auto;
+        min-width: 250px;
+    }
+    
+    .leaflet-control-geocoder {
+        width: 300px;
+        max-width: 90%;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .legend-color {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    .modal-backdrop {
+        z-index: 1040;
+    }
+    
+    .modal {
+        z-index: 1050;
+    }
+    
+    #mapControls {
+        display: flex;
+        gap: 8px;
+    }
+    
+    #mapControls button {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Управление городами</h2>
+        <div>
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">← Назад к админ-панели</a>
+            <a href="{{ url_for('admin_add_city') }}" class="btn btn-success">+ Добавить город</a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Список городов</h5>
+        </div>
+        <div class="card-body">
+            {% if cities %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Координаты</th>
+                            <th>Масштаб</th>
+                            <th>Статус</th>
+                            <th>Идей</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for city in cities %}
+                        <tr>
+                            <td>{{ city.id }}</td>
+                            <td><strong>{{ city.name }}</strong></td>
+                            <td>
+                                {% if city.description %}
+                                {{ city.description[:50] }}{% if city.description|length > 50 %}...{% endif %}
+                                {% else %}
+                                <span class="text-muted">Нет описания</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>Ш: {{ "%.4f"|format(city.latitude) }}<br>
+                                Д: {{ "%.4f"|format(city.longitude) }}</small>
+                            </td>
+                            <td>{{ city.zoom }}</td>
+                            <td>
+                                {% if city.is_active %}
+                                <span class="badge bg-success">Активен</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Неактивен</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set city_ideas_count = city.city_ideas|length %}
+                                {% if city_ideas_count > 0 %}
+                                <a href="{{ url_for('ideas_list', city_id=city.id) }}" class="badge bg-info text-decoration-none">
+                                    {{ city_ideas_count }}
+                                </a>
+                                {% else %}
+                                <span class="badge bg-secondary">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('admin_edit_city', city_id=city.id) }}" 
+                                       class="btn btn-warning" title="Редактировать">
+                                        ✏️
+                                    </a>
+                                    <a href="{{ url_for('map_page', city_id=city.id) }}" 
+                                       class="btn btn-info" title="Посмотреть на карте">
+                                        🗺️
+                                    </a>
+                                    <a href="{{ url_for('admin_delete_city', city_id=city.id) }}" 
+                                       class="btn btn-danger" title="Удалить"
+                                       onclick="return confirm('Вы уверены, что хотите удалить город {{ city.name }}?')">
+                                        🗑️
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                Городов пока нет. <a href="{{ url_for('admin_add_city') }}">Добавьте первый город</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Статистика по городам</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for city in cities %}
+                        {% set ideas_count = city.city_ideas|length %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ city.name }}
+                            <div>
+                                <span class="badge bg-primary rounded-pill">{{ ideas_count }}</span>
+                                <small class="text-muted ms-2">
+                                    {% if ideas_count > 0 %}
+                                    {% set approved_count = city.city_ideas|selectattr('status', 'equalto', 'approved')|list|length %}
+                                    <span class="text-success">✓{{ approved_count }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Быстрые действия</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin_add_city') }}" class="btn btn-success">
+                            + Добавить новый город
+                        </a>
+                        <a href="{{ url_for('map_page') }}" class="btn btn-info">
+                            🗺️ Просмотреть все города на карте
+                        </a>
+                        <button class="btn btn-outline-secondary" onclick="generateTestCities()">
+                            🧪 Создать тестовые города
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function generateTestCities() {
+    if (confirm('Создать тестовые города? Это добавит несколько городов для демонстрации.')) {
+        fetch('/admin/generate_test_cities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Тестовые города успешно созданы!');
+                window.location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка');
+        });
+    }
+}
+</script>
+{% endblock %}

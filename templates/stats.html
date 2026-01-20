@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Статистика платформы</h2>
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">← Назад к админ-панели</a>
+        </div>
+        
+        <!-- Основная статистика -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-body text-center">
+                        <h4>{{ total_ideas }}</h4>
+                        <p>Всего идей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h4>{{ approved_ideas }}</h4>
+                        <p>Одобрено</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-body text-center">
+                        <h4>{{ pending_ideas }}</h4>
+                        <p>На модерации</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h4>{{ implemented_ideas }}</h4>
+                        <p>Реализовано</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h4>{{ total_users }}</h4>
+                        <p>Пользователей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h4>{{ total_votes }}</h4>
+                        <p>Голосов</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h4>{{ total_comments }}</h4>
+                        <p>Комментариев</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h4>{{ total_cities }}</h4>
+                        <p>Активных городов</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Статистика по категориям -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Статистика по категориям</h5>
+            </div>
+            <div class="card-body">
+                {% if categories %}
+                <div class="row">
+                    {% for cat in categories %}
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex justify-content-between align-items-center border p-3 rounded">
+                            <span>{{ cat.category|title }}</span>
+                            <span class="badge bg-primary">{{ cat.count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Нет данных по категориям</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Статистика по городам -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Статистика по городам</h5>
+            </div>
+            <div class="card-body">
+                {% if cities_stats %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Город</th>
+                                <th>Количество идей</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for city in cities_stats %}
+                            <tr>
+                                <td>{{ city.name }}</td>
+                                <td>{{ city.count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Нет данных по городам</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Самые активные пользователи -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Самые активные пользователи (по количеству идей)</h5>
+            </div>
+            <div class="card-body">
+                {% if active_users %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Пользователь</th>
+                                <th>Количество идей</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in active_users %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.ideas_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Нет данных по пользователям</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Топ идей -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Топ идей по голосам</h5>
+            </div>
+            <div class="card-body">
+                {% if top_ideas %}
+                {% for idea in top_ideas %}
+                <div class="border p-3 mb-3 rounded">
+                    <h6>{{ idea.title }}</h6>
+                    <p>{{ idea.description[:200] }}{% if idea.description|length > 200 %}...{% endif %}</p>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <span class="badge bg-secondary">{{ idea.category }}</span>
+                            <small class="text-muted">Автор: {{ idea.username }}</small>
+                            {% if idea.city_name %}
+                            <small class="text-muted ms-2">Город: {{ idea.city_name }}</small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="badge bg-success">{{ idea.votes_count }} 👍</span>
+                            <a href="{{ url_for('idea_detail', idea_id=idea.id) }}" class="btn btn-sm btn-info">Просмотреть</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted">Нет данных по идеям</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

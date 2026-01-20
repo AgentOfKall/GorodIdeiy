@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0">Мой профиль</h3>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3 text-center">
+                        <div class="mb-3">
+                            <div class="display-1">👤</div>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <h4>{{ user.username }}</h4>
+                        <p class="text-muted">{{ user.email }}</p>
+                        <p><strong>Дата регистрации:</strong> {{ user.created_at[:10] if user.created_at else 'Неизвестно' }}</p>
+                        <p><strong>Статус:</strong> 
+                            {% if user.is_admin %}
+                            <span class="badge bg-danger">Администратор</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Пользователь</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h4>{{ user_stats.ideas_count }}</h4>
+                                <p class="text-muted">Мои идеи</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h4>{{ user_stats.votes_count }}</h4>
+                                <p class="text-muted">Мои голоса</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h4>{{ user_stats.comments_count }}</h4>
+                                <p class="text-muted">Мои комментарии</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h4>Мои идеи</h4>
+                {% if ideas %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Статус</th>
+                                <th>Голоса</th>
+                                <th>Дата</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for idea in ideas %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('idea_detail', idea_id=idea.id) }}">{{ idea.title[:30] }}{% if idea.title|length > 30 %}...{% endif %}</a>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ idea.category }}</span></td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if idea.status == 'approved' else 'warning' if idea.status == 'pending' else 'danger' }}">
+                                        {{ 'Одобрено' if idea.status == 'approved' else 'На модерации' if idea.status == 'pending' else 'Отклонено' }}
+                                    </span>
+                                </td>
+                                <td>{{ idea.votes_count }}</td>
+                                <td>{{ idea.created_at[:10] }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('idea_detail', idea_id=idea.id) }}" class="btn btn-info">Просмотр</a>
+                                        <a href="{{ url_for('delete_idea', idea_id=idea.id) }}" 
+                                           class="btn btn-danger"
+                                           onclick="return confirm('Вы уверены, что хотите удалить идею \"{{ idea.title }}\"?')">
+                                            🗑️
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    У вас пока нет предложенных идей. <a href="{{ url_for('add_idea') }}">Предложите первую!</a>
+                </div>
+                {% endif %}
+                
+                {% if user_stats.ideas_by_status %}
+                <div class="mt-4">
+                    <h5>Статистика моих идей</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ user_stats.ideas_by_status.get('approved', 0) }}</h4>
+                                    <p>Одобрено</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ user_stats.ideas_by_status.get('pending', 0) }}</h4>
+                                    <p>На модерации</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ user_stats.ideas_by_status.get('rejected', 0) }}</h4>
+                                    <p>Отклонено</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ user_stats.ideas_by_status.get('implemented', 0) }}</h4>
+                                    <p>Реализовано</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Предложить новую идею</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>Выберите способ добавления:</strong>
+                    <div class="mt-2">
+                        <a href="{{ url_for('map_page', add_idea='true') }}" class="btn btn-outline-info btn-sm">
+                            🗺️ Добавить на карте (рекомендуется)
+                        </a>
+                        <span class="mx-2">или</span>
+                        <button class="btn btn-outline-secondary btn-sm" disabled>
+                            📝 Заполнить форму ниже
+                        </button>
+                    </div>
+                    <p class="mt-2 mb-0"><small>Совет: Используйте карту для точного указания местоположения!</small></p>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Название идеи *</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{{ request.form.get('title', '') }}" required
+                               placeholder="Краткое и понятное название">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Подробное описание *</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="5" required placeholder="Опишите детали вашей идеи">{{ request.form.get('description', '') }}</textarea>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="category" class="form-label">Категория *</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Выберите категорию</option>
+                                {% for category in categories %}
+                                <option value="{{ category }}" 
+                                        {% if request.form.get('category', '') == category %}selected{% endif %}>
+                                    {{ category|title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="city_id" class="form-label">Город</label>
+                            <select class="form-select" id="city_id" name="city_id">
+                                <option value="">Не указан</option>
+                                {% for city in cities %}
+                                <option value="{{ city.id }}" 
+                                        {% if request.form.get('city_id', '')|int == city.id or default_city_id == city.id %}selected{% endif %}>
+                                    {{ city.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="latitude" class="form-label">Широта *</label>
+                            <div class="input-group">
+                                <input type="number" step="any" class="form-control" id="latitude" 
+                                       name="latitude" value="{{ default_latitude or request.form.get('latitude', '') }}" required>
+                                <button type="button" class="btn btn-outline-secondary" id="getLocationBtn">
+                                    📍
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <a href="{{ url_for('map_page', add_idea='true') }}" class="text-decoration-none">
+                                    🗺️ Или укажите на карте
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="longitude" class="form-label">Долгота *</label>
+                            <input type="number" step="any" class="form-control" id="longitude" 
+                                   name="longitude" value="{{ default_longitude or request.form.get('longitude', '') }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Изображение (опционально)</label>
+                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                        <div class="form-text">Можно добавить фото или схему</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('ideas_list') }}" class="btn btn-secondary me-md-2">Отмена</a>
+                        <button type="submit" class="btn btn-success">Отправить на модерацию</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Скрипт для получения текущей геолокации
+document.getElementById('getLocationBtn').addEventListener('click', function() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+                document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+                alert('Координаты получены!');
+            },
+            function(error) {
+                let message = 'Не удалось получить координаты: ';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message += 'Пользователь отказал в доступе';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message += 'Информация о местоположении недоступна';
+                        break;
+                    case error.TIMEOUT:
+                        message += 'Время ожидания истекло';
+                        break;
+                    default:
+                        message += 'Неизвестная ошибка';
+                }
+                alert(message);
+            }
+        );
+    } else {
+        alert('Геолокация не поддерживается вашим браузером');
+    }
+});
+</script>
+{% endblock %}

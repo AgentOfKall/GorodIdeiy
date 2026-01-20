@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 mb-4">Город Идей</h1>
+        <p class="lead">Платформа для участия жителей в развитии городской среды</p>
+        
+        <div class="row mt-5">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">🗺️ Интерактивная карта</h5>
+                        <p class="card-text">Смотрите предложения других жителей на карте города</p>
+                        <a href="{{ url_for('map_page') }}" class="btn btn-primary">Открыть карту</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">💡 Предложить идею</h5>
+                        <p class="card-text">Поделитесь своей идеей по улучшению города</p>
+                        <a href="{{ url_for('add_idea') }}" class="btn btn-success">Добавить идею</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">📋 Все предложения</h5>
+                        <p class="card-text">Изучите все идеи и поддержите понравившиеся</p>
+                        <a href="{{ url_for('ideas_list') }}" class="btn btn-info">Смотреть идеи</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <h3>Как это работает?</h3>
+            <div class="row text-start mt-4">
+                <div class="col-md-3">
+                    <h5>1. Регистрация</h5>
+                    <p>Создайте аккаунт на платформе</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>2. Предложение</h5>
+                    <p>Добавьте свою идею с описанием и локацией</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>3. Обсуждение</h5>
+                    <p>Комментируйте и голосуйте за идеи других</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>4. Реализация</h5>
+                    <p>Лучшие идеи передаются администрации</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

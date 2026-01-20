@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Реализованные идеи - Город Идей</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-city me-2"></i>Город Идей
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Главная</a>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('map_page') }}">Карта</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('ideas_list') }}">Все идеи</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('implemented_ideas') }}">Реализованные</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('add_idea') }}">Предложить идею</a>
+                    </li>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            Администрирование
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_panel') }}">Модерация идей</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_cities') }}">Управление городами</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('stats') }}">Статистика</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="navbar-text">Привет, {{ current_user.username }}!</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile') }}">Профиль</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">Выйти</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Войти</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Регистрация</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">Реализованные идеи</h2>
+                    <span class="badge bg-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        {{ ideas|length }} реализовано
+                    </span>
+                </div>
+                
+                <!-- Фильтры -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form method="GET" class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="category" class="form-label">Категория:</label>
+                                <select class="form-select" id="category" name="category">
+                                    <option value="all" {% if selected_category == 'all' %}selected{% endif %}>Все категории</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>
+                                        {{ category|title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="city_id" class="form-label">Город:</label>
+                                <select class="form-select" id="city_id" name="city_id">
+                                    <option value="" {% if not selected_city_id %}selected{% endif %}>Все города</option>
+                                    {% for city in cities %}
+                                    <option value="{{ city.id }}" {% if selected_city_id == city.id %}selected{% endif %}>
+                                        {{ city.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-filter me-1"></i>Применить фильтры
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Информация о реализованных идеях -->
+                <div class="alert alert-success mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="alert-heading mb-1">Что такое реализованные идеи?</h5>
+                            <p class="mb-0">Это предложения, которые уже были воплощены в жизнь городскими властями или местными жителями. Здесь вы можете увидеть, какие идеи из нашего сообщества уже работают на благо города!</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Список реализованных идей -->
+                {% if ideas %}
+                    {% for idea in ideas %}
+                    <div class="card mb-3 border-success">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>{{ idea.title }}
+                                </h5>
+                            </div>
+                            <div>
+                                <span class="badge bg-light text-success">
+                                    <i class="fas fa-calendar-check me-1"></i>
+                                    Реализовано
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% if idea.image_path %}
+                                <div class="col-md-3">
+                                    <img src="{{ url_for('static', filename='uploads/' + idea.image_path) }}" 
+                                         class="img-fluid rounded" alt="{{ idea.title }}">
+                                </div>
+                                {% endif %}
+                                <div class="{% if idea.image_path %}col-md-9{% else %}col-12{% endif %}">
+                                    <p class="card-text">{{ idea.description }}</p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="badge bg-secondary">{{ idea.category|title }}</span>
+                                            {% if idea.city_name %}
+                                            <span class="badge bg-info ms-1">
+                                                <i class="fas fa-map-marker-alt me-1"></i>{{ idea.city_name }}
+                                            </span>
+                                            {% endif %}
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="fas fa-user me-1"></i>Автор: {{ idea.username }}
+                                            </small>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>{{ idea.created_at[:10] }}
+                                            </small>
+                                        </div>
+                                        
+                                        <div>
+                                            <span class="badge bg-success me-2">
+                                                <i class="fas fa-thumbs-up me-1"></i>{{ idea.votes_count }}
+                                            </span>
+                                            <a href="{{ url_for('idea_detail', idea_id=idea.id) }}" class="btn btn-success">
+                                                <i class="fas fa-eye me-1"></i>Подробнее
+                                            </a>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if idea.comments %}
+                                    <div class="mt-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-comments me-1"></i>
+                                            {{ idea.comments|length }} комментариев
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-4x text-muted mb-3"></i>
+                            <h4>Пока нет реализованных идей</h4>
+                            <p class="mb-0">Когда идеи будут реализованы администрацией, они появятся здесь.</p>
+                            <p>Вы можете <a href="{{ url_for('ideas_list') }}">посмотреть все активные идеи</a> и проголосовать за понравившиеся.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-light mt-5 py-4">
+        <div class="container text-center">
+            <p>&copy; 2024 Город Идей. Интерактивная карта предложений жителей.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

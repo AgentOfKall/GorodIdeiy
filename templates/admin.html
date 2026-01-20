@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">Административная панель</h2>
+        
+        <!-- Статистика -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-body text-center">
+                        <h4>{{ total_ideas }}</h4>
+                        <p>Всего идей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h4>{{ total_users }}</h4>
+                        <p>Пользователей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-body text-center">
+                        <h4>{{ total_votes }}</h4>
+                        <p>Всего голосов</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h4>{{ total_cities }}</h4>
+                        <p>Городов</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Идеи на модерации -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Идеи на модерации ({{ pending_ideas|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if pending_ideas %}
+                    {% for idea in pending_ideas %}
+                    <div class="border p-3 mb-3 rounded">
+                        <h6>{{ idea.title }}</h6>
+                        <p>{{ idea.description[:200] }}{% if idea.description|length > 200 %}...{% endif %}</p>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="badge bg-secondary">{{ idea.category }}</span>
+                                <small class="text-muted">Автор: {{ idea.username }}</small>
+                                {% if idea.city_name %}
+                                <small class="text-muted ms-2">Город: {{ idea.city_name }}</small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('approve_idea', idea_id=idea.id) }}" class="btn btn-success">Одобрить</a>
+                                    <a href="{{ url_for('reject_idea', idea_id=idea.id) }}" class="btn btn-danger">Отклонить</a>
+                                    <a href="{{ url_for('idea_detail', idea_id=idea.id) }}" class="btn btn-info">Просмотреть</a>
+                                    <a href="{{ url_for('delete_idea', idea_id=idea.id) }}" 
+                                       class="btn btn-outline-danger"
+                                       onclick="return confirm('Вы уверены, что хотите удалить идею \"{{ idea.title }}\"?')">
+                                        🗑️
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Нет идей для модерации.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Одобренные идеи -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Одобренные идеи ({{ approved_ideas|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if approved_ideas %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Категория</th>
+                                    <th>Автор</th>
+                                    <th>Город</th>
+                                    <th>Голоса</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for idea in approved_ideas %}
+                                <tr>
+                                    <td>{{ idea.title[:30] }}{% if idea.title|length > 30 %}...{% endif %}</td>
+                                    <td><span class="badge bg-secondary">{{ idea.category }}</span></td>
+                                    <td>{{ idea.username }}</td>
+                                    <td>{{ idea.city_name if idea.city_name else '-' }}</td>
+                                    <td>{{ idea.votes_count }}</td>
+                                    <td>{{ idea.created_at[:10] }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('idea_detail', idea_id=idea.id) }}" class="btn btn-info">Просмотр</a>
+                                            <a href="{{ url_for('implement_idea', idea_id=idea.id) }}" class="btn btn-success">Реализовано</a>
+                                            <a href="{{ url_for('delete_idea', idea_id=idea.id) }}" 
+                                               class="btn btn-danger"
+                                               onclick="return confirm('Вы уверены, что хотите удалить идею \"{{ idea.title }}\"?')">
+                                                🗑️
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Нет одобренных идей.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

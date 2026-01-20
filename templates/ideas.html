@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">Все предложения</h2>
+        
+        <!-- Фильтры -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="category" class="form-label">Категория:</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="all" {% if selected_category == 'all' %}selected{% endif %}>Все категории</option>
+                            {% for category in categories %}
+                            <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>
+                                {{ category|title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="city_id" class="form-label">Город:</label>
+                        <select class="form-select" id="city_id" name="city_id">
+                            <option value="" {% if not selected_city_id %}selected{% endif %}>Все города</option>
+                            {% for city in cities %}
+                            <option value="{{ city.id }}" {% if selected_city_id == city.id %}selected{% endif %}>
+                                {{ city.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Применить фильтры</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Список идей -->
+        {% if ideas %}
+            {% for idea in ideas %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        {% if idea.image_path %}
+                        <div class="col-md-3">
+                            <img src="{{ url_for('static', filename='uploads/' + idea.image_path) }}" 
+                                 class="img-fluid rounded" alt="{{ idea.title }}">
+                        </div>
+                        {% endif %}
+                        <div class="{% if idea.image_path %}col-md-9{% else %}col-12{% endif %}">
+                            <h5 class="card-title">{{ idea.title }}</h5>
+                            <p class="card-text">{{ idea.description }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-secondary">{{ idea.category|title }}</span>
+                                    {% if idea.city_name %}
+                                    <span class="badge bg-info ms-1">{{ idea.city_name }}</span>
+                                    {% endif %}
+                                    <small class="text-muted">Автор: {{ idea.username }}</small>
+                                    <small class="text-muted"> | {{ idea.created_at[:10] }}</small>
+                                </div>
+                                
+                                <div>
+                                    <span class="badge bg-success me-2">{{ idea.votes_count }} 👍</span>
+                                    {% if current_user.is_authenticated %}
+                                    <a href="{{ url_for('vote_idea', idea_id=idea.id) }}" class="btn btn-sm btn-outline-success">
+                                        Поддержать
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('idea_detail', idea_id=idea.id) }}" class="btn btn-sm btn-primary">
+                                        Подробнее
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">
+                Пока нет предложений.
+                <a href="{{ url_for('add_idea') }}" class="alert-link">Предложите первую идею!</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
