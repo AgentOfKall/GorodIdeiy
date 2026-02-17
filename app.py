@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import database as db
+from models import db
+import database
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
