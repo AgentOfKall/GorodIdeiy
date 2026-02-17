@@ -1,6 +1,7 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
+from sqlalchemy import func
 from models import db, User, City, Idea, Vote, Comment
 
 # ------------------------------------------------------------
@@ -84,7 +85,7 @@ def init_db():
     # Создаём тестовые города, если нет
     if City.query.count() == 0:
         cities = [
-            City(name='Кисилевск', description='Промышленный центр Кемеровской области',
+            City(name='Киселевск', description='Промышленный центр Кемеровской области',
                  latitude=54.0000, longitude=86.5833, zoom=12),
             City(name='Кемерово', description='Столица Кузбасса',
                  latitude=55.3544, longitude=86.0878, zoom=12),
@@ -188,7 +189,9 @@ def get_all_ideas(status=None, category=None, city_id=None, user_id=None,
     # Разбор order_by (ожидается строка вида "поле направление")
     # По умолчанию сортируем по created_at DESC
     if order_by:
-        field, direction = (order_by.split() + ['DESC'])[:2]
+        parts = order_by.split()
+        field = parts[0]
+        direction = parts[1] if len(parts) > 1 else 'DESC'
         if direction.upper() == 'DESC':
             query = query.order_by(getattr(Idea, field).desc())
         else:
@@ -231,8 +234,7 @@ def delete_idea(idea_id):
                 os.remove(image_path)
             except:
                 pass
-    # Удаляем комментарии и голоса (каскадно удалятся через relationship, если настроено,
-    # но лучше удалить явно для надёжности)
+    # Удаляем комментарии и голоса
     Comment.query.filter_by(idea_id=idea_id).delete()
     Vote.query.filter_by(idea_id=idea_id).delete()
     db.session.delete(idea)
@@ -301,7 +303,6 @@ def get_stats():
     stats['total_cities'] = City.query.filter_by(is_active=True).count()
 
     # Категории
-    from sqlalchemy import func
     categories = db.session.query(Idea.category, func.count(Idea.id).label('count')) \
                            .filter(Idea.status == 'approved') \
                            .group_by(Idea.category).all()
@@ -329,10 +330,7 @@ def get_stats():
     top = Idea.query.filter_by(status='approved') \
                     .order_by(Idea.votes_count.desc()) \
                     .limit(10).all()
-    stats['top_ideas'] = []
-    for idea in top:
-        d = idea_to_dict(idea, include_comments=False)
-        stats['top_ideas'].append(d)
+    stats['top_ideas'] = [idea_to_dict(idea, include_comments=False) for idea in top]
 
     return stats
 
