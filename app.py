@@ -4,7 +4,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
-import database as db
 from models import db
 import database
 
@@ -19,7 +18,6 @@ db.init_app(app)
 with app.app_context():
     database.init_db()
 # Инициализация базы данных
-db.init_db()
 
 # Flask-Login
 login_manager = LoginManager()
