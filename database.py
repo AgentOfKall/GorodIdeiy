@@ -13,6 +13,7 @@ def user_to_dict(user):
     return {
         'id': user.id,
         'username': user.username,
+        'password_hash': user.password_hash,
         'email': user.email,
         'is_admin': user.is_admin,
         'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S') if user.created_at else None
