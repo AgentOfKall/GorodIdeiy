@@ -29,7 +29,8 @@ class City(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    ideas = db.relationship('Idea', backref='city_ref', lazy=True)
+    # ЕДИНСТВЕННАЯ связь "один ко многим" с идеями
+    ideas = db.relationship('Idea', back_populates='city', lazy=True)
 
 class Idea(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -47,7 +48,8 @@ class Idea(db.Model):
     image_path = db.Column(db.String(300))
     
     user = db.relationship('User', backref=db.backref('ideas', lazy=True))
-    city = db.relationship('City', backref=db.backref('city_ideas', lazy=True))
+    # ЕДИНСТВЕННАЯ связь с городом, обратная к City.ideas
+    city = db.relationship('City', back_populates='ideas', lazy=True)
 
 class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
