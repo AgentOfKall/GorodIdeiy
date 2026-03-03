@@ -1,12 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from models import db
-import database
-
+import database  # модуль с функциями доступа к данным
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -15,9 +14,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
 with app.app_context():
-    database.init_db()
-# Инициализация базы данных
+    database.init_db()  # создаёт таблицы, если их нет
 
 # Flask-Login
 login_manager = LoginManager()
@@ -37,7 +36,7 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    user_data = db.get_user_by_id(user_id)
+    user_data = database.get_user_by_id(user_id)   # <-- исправлено: database., а не .get_user...
     if user_data:
         return User(user_data)
     return None
@@ -52,15 +51,15 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        latest_ideas = db.get_latest_ideas(limit=3)
-        popular_ideas = db.get_popular_ideas(limit=3)
-        implemented_ideas = db.get_all_ideas(status='implemented', limit=3)
-        cities = db.get_all_cities()
+        latest_ideas = database.get_latest_ideas(limit=3)
+        popular_ideas = database.get_popular_ideas(limit=3)
+        implemented_ideas = database.get_all_ideas(status='implemented', limit=3)
+        cities = database.get_all_cities()
     else:
         latest_ideas = []
         popular_ideas = []
         implemented_ideas = []
-        cities = db.get_all_cities()[:3]
+        cities = database.get_all_cities()[:3]
 
     return render_template('index.html',
                            latest_ideas=latest_ideas,
@@ -78,26 +77,26 @@ def map_page():
 
     city = None
     if city_id:
-        city = db.get_city_by_id(city_id)
+        city = database.get_city_by_id(city_id)
 
     if not city:
-        cities_list = db.get_all_cities()
+        cities_list = database.get_all_cities()
         if cities_list:
             city = cities_list[0]
 
     ideas = []
     if city_id:
         if show_implemented:
-            ideas = db.get_all_ideas(status='implemented', city_id=city_id)
+            ideas = database.get_all_ideas(status='implemented', city_id=city_id)
         else:
-            ideas = db.get_all_ideas(status='approved', city_id=city_id)
+            ideas = database.get_all_ideas(status='approved', city_id=city_id)
     else:
         if show_implemented:
-            ideas = db.get_all_ideas(status='implemented')
+            ideas = database.get_all_ideas(status='implemented')
         else:
-            ideas = db.get_all_ideas(status='approved')
+            ideas = database.get_all_ideas(status='approved')
 
-    cities = db.get_all_cities()
+    cities = database.get_all_cities()
 
     return render_template('map.html',
                            ideas=ideas,
@@ -114,18 +113,17 @@ def ideas_list():
     city_id = request.args.get('city_id', type=int)
     status = request.args.get('status', 'approved')
 
-    # Ограничиваем доступные статусы для обычных пользователей
     if status not in ['approved', 'implemented']:
         status = 'approved'
 
-    ideas = db.get_all_ideas(
+    ideas = database.get_all_ideas(
         status=status,
         category=category if category != 'all' else None,
         city_id=city_id if city_id else None
     )
 
     categories = ['спорт', 'культура', 'детский досуг', 'экология', 'транспорт', 'благоустройство']
-    cities = db.get_all_cities()
+    cities = database.get_all_cities()
 
     return render_template('ideas.html',
                            ideas=ideas,
@@ -136,21 +134,20 @@ def ideas_list():
                            selected_status=status)
 
 
-# Новый маршрут для реализованных идей
 @app.route('/implemented')
 @login_required
 def implemented_ideas():
     category = request.args.get('category', 'all')
     city_id = request.args.get('city_id', type=int)
 
-    ideas = db.get_all_ideas(
+    ideas = database.get_all_ideas(
         status='implemented',
         category=category if category != 'all' else None,
         city_id=city_id if city_id else None
     )
 
     categories = ['спорт', 'культура', 'детский досуг', 'экология', 'транспорт', 'благоустройство']
-    cities = db.get_all_cities()
+    cities = database.get_all_cities()
 
     return render_template('implemented.html',
                            ideas=ideas,
@@ -190,7 +187,7 @@ def add_idea():
                 flash(error, 'danger')
             categories = ['спорт', 'культура', 'детский досуг', 'экология', 'транспорт', 'благоустройство',
                           'образование', 'здравоохранение']
-            cities = db.get_all_cities()
+            cities = database.get_all_cities()
             return render_template('add_idea.html',
                                    categories=categories,
                                    cities=cities,
@@ -215,8 +212,8 @@ def add_idea():
                     file.save(file_path)
                     image_path = filename
 
-        idea_id = db.create_idea(title, description, category, latitude, longitude,
-                                 current_user.id, city_id, image_path)
+        idea_id = database.create_idea(title, description, category, latitude, longitude,
+                                       current_user.id, city_id, image_path)
 
         flash('Идея успешно добавлена и отправлена на модерацию!', 'success')
         return redirect(url_for('idea_detail', idea_id=idea_id))
@@ -227,7 +224,7 @@ def add_idea():
 
     categories = ['спорт', 'культура', 'детский досуг', 'экология', 'транспорт', 'благоустройство', 'образование',
                   'здравоохранение']
-    cities = db.get_all_cities()
+    cities = database.get_all_cities()
 
     return render_template('add_idea.html',
                            categories=categories,
@@ -240,7 +237,7 @@ def add_idea():
 @app.route('/idea/<int:idea_id>')
 @login_required
 def idea_detail(idea_id):
-    idea = db.get_idea_by_id(idea_id, increment_views=True)
+    idea = database.get_idea_by_id(idea_id, increment_views=True)
     if not idea:
         abort(404)
 
@@ -255,11 +252,10 @@ def idea_detail(idea_id):
 @app.route('/vote/<int:idea_id>')
 @login_required
 def vote_idea(idea_id):
-    idea = db.get_idea_by_id(idea_id, increment_views=False)
+    idea = database.get_idea_by_id(idea_id, increment_views=False)
 
-    # Проверяем, что идея одобрена (нельзя голосовать за реализованные или на модерации)
     if idea and idea['status'] == 'approved':
-        if db.add_vote(current_user.id, idea_id):
+        if database.add_vote(current_user.id, idea_id):
             flash('Ваш голос учтен!', 'success')
         else:
             flash('Вы уже голосовали за эту идею!', 'warning')
@@ -272,16 +268,15 @@ def vote_idea(idea_id):
 @app.route('/add_comment/<int:idea_id>', methods=['POST'])
 @login_required
 def add_comment(idea_id):
-    idea = db.get_idea_by_id(idea_id, increment_views=False)
+    idea = database.get_idea_by_id(idea_id, increment_views=False)
 
-    # Проверяем, что идея одобрена или реализована
     if idea and (idea['status'] == 'approved' or idea['status'] == 'implemented'):
         text = request.form.get('text', '').strip()
         if not text:
             flash('Комментарий не может быть пустым', 'warning')
             return redirect(request.referrer or url_for('idea_detail', idea_id=idea_id))
 
-        db.add_comment(text, current_user.id, idea_id)
+        database.add_comment(text, current_user.id, idea_id)
         flash('Комментарий добавлен!', 'success')
         return redirect(url_for('idea_detail', idea_id=idea_id))
     else:
@@ -297,10 +292,10 @@ def admin_panel():
         flash('Доступ запрещен!', 'danger')
         return redirect(url_for('index'))
 
-    pending_ideas = db.get_all_ideas(status='pending')
-    approved_ideas = db.get_all_ideas(status='approved')
-    implemented_ideas = db.get_all_ideas(status='implemented')
-    stats = db.get_stats()
+    pending_ideas = database.get_all_ideas(status='pending')
+    approved_ideas = database.get_all_ideas(status='approved')
+    implemented_ideas = database.get_all_ideas(status='implemented')
+    stats = database.get_stats()
 
     return render_template('admin.html',
                            pending_ideas=pending_ideas,
@@ -319,7 +314,7 @@ def approve_idea(idea_id):
         flash('Доступ запрещен!', 'danger')
         return redirect(url_for('index'))
 
-    db.update_idea_status(idea_id, 'approved')
+    database.update_idea_status(idea_id, 'approved')
     flash('Идея одобрена!', 'success')
     return redirect(url_for('admin_panel'))
 
@@ -331,7 +326,7 @@ def reject_idea(idea_id):
         flash('Доступ запрещен!', 'danger')
         return redirect(url_for('index'))
 
-    db.update_idea_status(idea_id, 'rejected')
+    database.update_idea_status(idea_id, 'rejected')
     flash('Идея отклонена!', 'success')
     return redirect(url_for('admin_panel'))
 
@@ -343,16 +338,15 @@ def implement_idea(idea_id):
         flash('Доступ запрещен!', 'danger')
         return redirect(url_for('index'))
 
-    db.update_idea_status(idea_id, 'implemented')
+    database.update_idea_status(idea_id, 'implemented')
     flash('Идея помечена как реализованная!', 'success')
     return redirect(url_for('admin_panel'))
 
 
-# Удаление идеи (для админов и авторов)
 @app.route('/delete_idea/<int:idea_id>')
 @login_required
 def delete_idea(idea_id):
-    idea = db.get_idea_by_id(idea_id, increment_views=False)
+    idea = database.get_idea_by_id(idea_id, increment_views=False)
 
     if not idea:
         flash('Идея не найдена!', 'danger')
@@ -362,7 +356,7 @@ def delete_idea(idea_id):
         flash('Вы не можете удалить эту идею!', 'danger')
         return redirect(url_for('idea_detail', idea_id=idea_id))
 
-    db.delete_idea(idea_id)
+    database.delete_idea(idea_id)
     flash('Идея успешно удалена!', 'success')
 
     if request.referrer and 'admin' in request.referrer:
@@ -373,7 +367,6 @@ def delete_idea(idea_id):
         return redirect(url_for('profile'))
 
 
-# Управление городами
 @app.route('/admin/cities')
 @login_required
 def admin_cities():
@@ -381,7 +374,7 @@ def admin_cities():
         flash('Доступ запрещен!', 'danger')
         return redirect(url_for('index'))
 
-    cities = db.get_all_cities(active_only=False)
+    cities = database.get_all_cities(active_only=False)
     return render_template('admin_cities.html', cities=cities)
 
 
@@ -416,7 +409,7 @@ def admin_add_city():
                 flash(error, 'danger')
             return redirect(url_for('admin_add_city'))
 
-        city_id = db.create_city(name, description, latitude, longitude, zoom, is_active)
+        city_id = database.create_city(name, description, latitude, longitude, zoom, is_active)
         if city_id:
             flash(f'Город "{name}" успешно добавлен!', 'success')
             return redirect(url_for('admin_cities'))
@@ -434,7 +427,7 @@ def admin_edit_city(city_id):
         flash('Доступ запрещен!', 'danger')
         return redirect(url_for('index'))
 
-    city = db.get_city_by_id(city_id)
+    city = database.get_city_by_id(city_id)
     if not city:
         flash('Город не найден!', 'danger')
         return redirect(url_for('admin_cities'))
@@ -447,7 +440,7 @@ def admin_edit_city(city_id):
         zoom = int(request.form.get('zoom', 12))
         is_active = 'is_active' in request.form
 
-        db.update_city(city_id, name, description, latitude, longitude, zoom, is_active)
+        database.update_city(city_id, name, description, latitude, longitude, zoom, is_active)
 
         flash(f'Город "{name}" успешно обновлен!', 'success')
         return redirect(url_for('admin_cities'))
@@ -462,23 +455,21 @@ def admin_delete_city(city_id):
         flash('Доступ запрещен!', 'danger')
         return redirect(url_for('index'))
 
-    db.delete_city(city_id)
+    database.delete_city(city_id)
     flash('Город успешно удален!', 'success')
     return redirect(url_for('admin_cities'))
 
 
-# API для получения данных
 @app.route('/api/ideas')
 @login_required
 def api_ideas():
     city_id = request.args.get('city_id', type=int)
     status = request.args.get('status', 'approved')
 
-    # Ограничиваем доступные статусы
     if status not in ['approved', 'implemented']:
         status = 'approved'
 
-    ideas = db.get_all_ideas(status=status, city_id=city_id)
+    ideas = database.get_all_ideas(status=status, city_id=city_id)
 
     result = []
     for idea in ideas:
@@ -503,7 +494,7 @@ def api_ideas():
 
 @app.route('/api/cities')
 def api_cities():
-    cities = db.get_all_cities()
+    cities = database.get_all_cities()
     result = []
     for city in cities:
         result.append({
@@ -516,7 +507,6 @@ def api_cities():
     return jsonify(result)
 
 
-# Статистика (только для админов)
 @app.route('/stats')
 @login_required
 def stats():
@@ -524,16 +514,15 @@ def stats():
         flash('Доступ к статистике имеют только администраторы!', 'danger')
         return redirect(url_for('index'))
 
-    stats_data = db.get_stats()
+    stats_data = database.get_stats()
     return render_template('stats.html', **stats_data)
 
 
-# Страница профиля пользователя
 @app.route('/profile')
 @login_required
 def profile():
-    user_ideas = db.get_ideas_by_user(current_user.id)
-    user_stats = db.get_user_stats(current_user.id)
+    user_ideas = database.get_ideas_by_user(current_user.id)
+    user_stats = database.get_user_stats(current_user.id)
 
     return render_template('profile.html',
                            user=current_user,
@@ -541,7 +530,6 @@ def profile():
                            user_stats=user_stats)
 
 
-# Аутентификация
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -564,7 +552,7 @@ def register():
         if password != confirm_password:
             errors.append('Пароли не совпадают')
 
-        if db.get_user_by_username(username):
+        if database.get_user_by_username(username):
             errors.append('Пользователь с таким именем уже существует')
 
         if errors:
@@ -572,7 +560,7 @@ def register():
                 flash(error, 'danger')
             return render_template('register.html')
 
-        user_id = db.create_user(username, email, password)
+        user_id = database.create_user(username, email, password)
         if user_id:
             flash('Регистрация успешна! Теперь вы можете войти.', 'success')
             return redirect(url_for('login'))
@@ -590,7 +578,7 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '')
         password = request.form.get('password', '')
-        user_data = db.get_user_by_username(username)
+        user_data = database.get_user_by_username(username)
 
         if user_data:
             if check_password_hash(user_data['password_hash'], password):
@@ -624,7 +612,7 @@ def api_add_idea_from_map():
                 'message': 'Заполните все обязательные поля'
             }), 400
 
-        idea_id = db.create_idea(
+        idea_id = database.create_idea(
             title=data['title'],
             description=data['description'],
             category=data['category'],
@@ -675,7 +663,7 @@ def map_add_idea_from_click():
                 'message': 'Неверные координаты'
             }), 400
 
-        idea_id = db.create_idea(
+        idea_id = database.create_idea(
             title=data['title'],
             description=data['description'],
             category=data['category'],
@@ -705,7 +693,7 @@ def add_idea_ajax():
     try:
         data = request.get_json()
 
-        idea_id = db.create_idea(
+        idea_id = database.create_idea(
             data['title'],
             data['description'],
             data['category'],
@@ -728,7 +716,6 @@ def add_idea_ajax():
         })
 
 
-# Обработка ошибок
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
