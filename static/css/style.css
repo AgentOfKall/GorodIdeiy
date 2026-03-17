@@ -18,7 +18,7 @@ body {
 }
 
 .navbar-dark.bg-primary {
-    background: #0B6602;
+    background: linear-gradient(135deg, #3a5f40 0%, #2e4b33 100%);
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
@@ -250,7 +250,7 @@ body {
 /* Футер */
 footer {
     margin-top: auto;
-    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);
     color: white;
 }
 
@@ -488,84 +488,3 @@ footer {
 .list-group-item:hover {
     background-color: #f8f9fa;
 }
-/* === Зелёная тема вместо синей === */
-:root {
-    --green-primary: #0B6602;   /* ← поменяйте этот код на любой зелёный */
-    --green-darker: #094d01;
-    --green-darkest: #063401;
-}
-
-/* Фоны */
-.bg-primary {
-    background-color: var(--green-primary) !important;
-}
-
-/* Кнопки */
-.btn-primary {
-    background-color: var(--green-primary) !important;
-    border-color: var(--green-darker) !important;
-}
-
-.btn-primary:hover,
-.btn-primary:focus,
-.btn-primary:active {
-    background-color: var(--green-darker) !important;
-    border-color: var(--green-darkest) !important;
-}
-
-.btn-outline-primary {
-    color: var(--green-primary) !important;
-    border-color: var(--green-primary) !important;
-}
-
-.btn-outline-primary:hover {
-    background-color: var(--green-primary) !important;
-    color: #fff !important;
-}
-
-/* Текст */
-.text-primary {
-    color: var(--green-primary) !important;
-}
-
-/* Ссылки */
-a {
-    color: var(--green-primary) !important;
-}
-
-a:hover {
-    color: var(--green-darker) !important;
-}
-
-/* Бейджи */
-.badge.bg-primary {
-    background-color: var(--green-primary) !important;
-}
-
-/* Прогресс-бары */
-.progress-bar {
-    background-color: var(--green-primary) !important;
-}
-
-/* Границы */
-.border-primary {
-    border-color: var(--green-primary) !important;
-}
-
-/* Шапка (navbar) – используем тот же цвет */
-.navbar-dark.bg-primary {
-    background-color: var(--green-primary) !important;
-}
-
-/* Если хотите градиент, раскомментируйте следующую строку и уберите предыдущую */
-/* .navbar-dark.bg-primary {
-    background: linear-gradient(135deg, var(--green-primary) 0%, var(--green-darker) 100%) !important;
-} */
-
-/* Подвал остаётся серым – ничего не трогаем */
-footer {
-    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
-}
-
-/* Дополнительно: если где-то используются кастомные классы с синим,
-   их нужно будет найти и поправить отдельно, но основные – уже зелёные. */
