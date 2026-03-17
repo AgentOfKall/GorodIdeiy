@@ -18,7 +18,7 @@ body {
 }
 
 .navbar-dark.bg-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3a5f40 0%, #2e4b33 100%);
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
@@ -51,12 +51,12 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3a5f40 0%, #2e4b33 100%);
     border: none;
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #42e695 0%, #3bb2b8 100%);
+    background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
     border: none;
 }
 
@@ -141,7 +141,7 @@ body {
 }
 
 #addIdeaModal .modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3a5f40 0%, #2e4b33 100%);
     color: white;
     border-radius: 10px 10px 0 0;
 }
@@ -204,7 +204,7 @@ body {
 
 .map-btn {
     background: white;
-    border: 2px solid #007bff;
+    border: 2px solid #3a5f40;
     border-radius: 5px;
     padding: 8px 12px;
     cursor: pointer;
@@ -217,7 +217,7 @@ body {
 }
 
 .map-btn:hover {
-    background: #007bff;
+    background: #3a5f40;
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -237,8 +237,8 @@ body {
 }
 
 .form-control:focus, .form-select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    border-color: #3a5f40;
+    box-shadow: 0 0 0 0.25rem rgba(58, 95, 64, 0.25);
 }
 
 /* Алерты */
@@ -253,6 +253,7 @@ footer {
     background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);
     color: white;
 }
+
 @keyframes markerPulse {
     0% {
         transform: scale(1);
@@ -390,32 +391,33 @@ footer {
 
 /* Стили для формы в модальном окне */
 .form-control:focus, .form-select:focus {
-    border-color: #28a745;
-    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    border-color: #27ae60;
+    box-shadow: 0 0 0 0.2rem rgba(39, 174, 96, 0.25);
 }
 
 /* Стили для кнопок */
 .btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
     border: none;
     transition: all 0.3s;
 }
 
 .btn-success:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    background: linear-gradient(135deg, #3a5f40 0%, #2e4b33 100%);
     border: none;
     transition: all 0.3s;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+    box-shadow: 0 4px 8px rgba(58, 95, 64, 0.3);
 }
+
 /* Адаптивность */
 @media (max-width: 768px) {
     .card {
