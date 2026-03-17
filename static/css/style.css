@@ -18,7 +18,7 @@ body {
 }
 
 .navbar-dark.bg-primary {
-    background: linear-gradient(135deg, #3a5f40 0%, #2e4b33 100%);
+    background: linear-gradient(135deg, #4CAF50 0%, #6c757d 100%);
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
@@ -250,7 +250,7 @@ body {
 /* Футер */
 footer {
     margin-top: auto;
-    background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
     color: white;
 }
 
