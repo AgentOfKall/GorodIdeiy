@@ -18,7 +18,7 @@ body {
 }
 
 .navbar-dark.bg-primary {
-    background: linear-gradient(135deg, #4CAF50 0%, #6c757d 100%);
+    background: #0B6602;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
